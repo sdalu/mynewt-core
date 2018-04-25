@@ -28,13 +28,24 @@
 #  - FLASH_OFFSET contains the flash offset to download to
 #  - BOOT_LOADER is set if downloading a bootloader
 
-. $CORE_PATH/hw/scripts/jlink.sh
+set -x
+
+#. $CORE_PATH/hw/scripts/jlink.sh
+. $CORE_PATH/hw/scripts/openocd.sh
 
 if [ "$MFG_IMAGE" ]; then
     FLASH_OFFSET=0x0
 fi
 
 JLINK_DEV="nRF52"
+#CFG="-f interface/jlink.cfg  -c \'adapter_khz 1000; transport select swd\' -f target/nrf52.cfg"
+CFG="-s $BSP_PATH -f nrf52840.cfg"
 
 common_file_to_load
-jlink_load
+#jlink_load
+openocd_load
+openocd_reset_run
+
+
+
+

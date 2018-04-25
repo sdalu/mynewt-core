@@ -49,10 +49,10 @@ syscfg.defs:
         description: 'RX pin for UART1'
         value:  -1
     UART_1_PIN_RTS:
-        description: 'RTS pin for UART0'
+        description: 'RTS pin for UART1'
         value:  -1
     UART_1_PIN_CTS:
-        description: 'CTS pin for UART0'
+        description: 'CTS pin for UART1'
         value: -1
 
     SPI_0_MASTER_PIN_SCK:
