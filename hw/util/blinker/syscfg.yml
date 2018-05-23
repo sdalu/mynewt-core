@@ -22,7 +22,3 @@ syscfg.defs:
         description: >
             Default time unit (in ticks) if not sepecified.
         value: 'BLINK_UNIT_MEDIUM'
-    BLINK_EVENTQ:
-        description: >
-            Event queue to use. By default os_eventq_dflt_get()
-        value: 'os_eventq_dflt_get()'

@@ -30,6 +30,11 @@
 #include "hal/hal_watchdog.h"
 #include "hal/hal_i2c.h"
 #include "mcu/nrf52_hal.h"
+
+#if MYNEWT_VAL(TRNG)
+#include "trng/trng.h"
+#include "trng_nrf52/trng_nrf52.h"
+#endif
 #if MYNEWT_VAL(UART_0) || MYNEWT_VAL(UART_1)
 #include "uart/uart.h"
 #endif
@@ -49,6 +54,10 @@
 #endif
 #if MYNEWT_VAL(SOFT_PWM)
 #include <soft_pwm/soft_pwm.h>
+#endif
+
+#if MYNEWT_VAL(TRNG)
+static struct trng_dev os_bsp_trng;
 #endif
 
 #if MYNEWT_VAL(UART_0)
@@ -116,7 +125,9 @@ static struct pwm_dev os_bsp_pwm3;
 int pwm3_idx;
 #endif
 #if MYNEWT_VAL(SOFT_PWM)
-static struct pwm_dev os_bsp_spwm;
+static struct pwm_dev os_bsp_spwm[MYNEWT_VAL(SOFT_PWM_DEVS)];
+char* spwm_name[MYNEWT_VAL(SOFT_PWM_DEVS)];
+int spwm_idx[MYNEWT_VAL(SOFT_PWM_DEVS)];
 #endif
 
 #if MYNEWT_VAL(I2C_0)
@@ -196,11 +207,21 @@ void
 hal_bsp_init(void)
 {
     int rc;
+#if MYNEWT_VAL(SOFT_PWM)
+    int idx;
+#endif
 
     (void)rc;
 
     /* Make sure system clocks have started */
     hal_system_clock_start();
+
+#if MYNEWT_VAL(TRNG)
+    rc = os_dev_create(&os_bsp_trng.dev, "trng",
+                       OS_DEV_INIT_KERNEL, OS_DEV_INIT_PRIO_DEFAULT,
+                       nrf52_trng_dev_init, NULL);
+    assert(rc == 0);
+#endif
 
 #if MYNEWT_VAL(TIMER_0)
     rc = hal_timer_init(0, NULL);
@@ -278,13 +299,19 @@ hal_bsp_init(void)
     assert(rc == 0);
 #endif
 #if MYNEWT_VAL(SOFT_PWM)
-    rc = os_dev_create((struct os_dev *) &os_bsp_spwm,
-                       "spwm",
-                       OS_DEV_INIT_KERNEL,
-                       OS_DEV_INIT_PRIO_DEFAULT,
-                       soft_pwm_dev_init,
-                       NULL);
-    assert(rc == 0);
+    for (idx = 0; idx < MYNEWT_VAL(SOFT_PWM_DEVS); idx++)
+    {
+        spwm_name[idx] = "spwm0";
+        spwm_name[idx][4] = '0' + idx;
+        spwm_idx[idx] = idx;
+        rc = os_dev_create((struct os_dev *) &os_bsp_spwm[idx],
+                           spwm_name[idx],
+                           OS_DEV_INIT_KERNEL,
+                           OS_DEV_INIT_PRIO_DEFAULT,
+                           soft_pwm_dev_init,
+                           &spwm_idx[idx]);
+        assert(rc == 0);
+    }
 #endif
 
 #if (MYNEWT_VAL(OS_CPUTIME_TIMER_NUM) >= 0)

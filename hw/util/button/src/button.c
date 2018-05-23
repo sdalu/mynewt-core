@@ -21,15 +21,15 @@
 #include "os/mynewt.h"
 #include "button/button.h"
 
-#define _BUTTON_FSM_INIT			0
-#define _BUTTON_FSM_PRESSED			1
-#define _BUTTON_FSM_WAIT_DBLPRESSED		2
-#define _BUTTON_FSM_DBLPRESSED			3
-#define _BUTTON_FSM_HOLD_OR_REPEAT		4
+#define _BUTTON_FSM_INIT                        0
+#define _BUTTON_FSM_PRESSED                     1
+#define _BUTTON_FSM_WAIT_DBLPRESSED             2
+#define _BUTTON_FSM_DBLPRESSED                  3
+#define _BUTTON_FSM_HOLD_OR_REPEAT              4
 
-#define _BUTTON_RELEASED			0
-#define _BUTTON_PRESSED				1
-#define _BUTTON_TIMEOUT				2
+#define _BUTTON_RELEASED                        0
+#define _BUTTON_PRESSED                         1
+#define _BUTTON_TIMEOUT                         2
 
 struct button_event {
     struct os_event os_event;
@@ -40,10 +40,10 @@ struct button_event {
 static struct os_eventq *button_internal_evq = NULL;
 static struct os_eventq *button_callback_default_evq = NULL;
 
-#define BUTTON_POST_STATE_EVENT(button, flags)	\
+#define BUTTON_POST_STATE_EVENT(button, flags)  \
     button_post_event(button, BUTTON_STATE_CHANGED, flags)
 
-#define BUTTON_POST_ACTION_EVENT(button, flags)	\
+#define BUTTON_POST_ACTION_EVENT(button, flags) \
     button_post_event(button, BUTTON_ACTION, flags)
 
 static struct button_event button_event[MYNEWT_VAL(BUTTON_EVENT_MAX)] = { 0 };
@@ -55,9 +55,9 @@ button_alloc_event(void)
     int i;
 
     for (i = 0 ; i < MYNEWT_VAL(BUTTON_EVENT_MAX) ; i++) {
-	if (!OS_EVENT_QUEUED(&button_event[i].os_event)) {
-	    return &button_event[i];
-	}
+        if (!OS_EVENT_QUEUED(&button_event[i].os_event)) {
+            return &button_event[i];
+        }
     }
 
     return NULL;
@@ -82,11 +82,11 @@ button_event_handler(struct os_event *ev)
 /**
  * Post an event to the default queue.
  * 
- * @param button	button generating the event
- * @param type		type of event (state or action)
- * @param flags		event description (BUTTON_FLG_*)
+ * @param button        button generating the event
+ * @param type          type of event (state or action)
+ * @param flags         event description (BUTTON_FLG_*)
  *
- * @return		-1 unable to post event (not enough buffer)
+ * @return              -1 unable to post event (not enough buffer)
  *                       0 event posted
  *                       1 event not posted due to filtering
  */
@@ -97,41 +97,41 @@ button_post_event(button_t *button, uint8_t type, uint8_t flags)
 
 #if MYNEWT_VAL(BUTTON_USE_FILTERING)
     if (button->filter.enabled) {
-	uint8_t filter = 0xff;
-	switch(type) {
+        uint8_t filter = 0xff;
+        switch(type) {
 #if MYNEWT_VAL(BUTTON_EMIT_STATE_CHANGED)
-	case BUTTON_STATE_CHANGED:
-	    filter = button->filter.state;
-	    break;
+        case BUTTON_STATE_CHANGED:
+            filter = button->filter.state;
+            break;
 #endif
 #if MYNEWT_VAL(BUTTON_EMIT_ACTION)
-	case BUTTON_ACTION:
-	    filter = button->filter.action;
-	    break;
+        case BUTTON_ACTION:
+            filter = button->filter.action;
+            break;
 #endif
-	}
-	if (~filter & flags) {
-	    return 1;
-	}
+        }
+        if (~filter & flags) {
+            return 1;
+        }
     }
 #endif
 
     evt = button_alloc_event();
-    if (evt) {	
-	evt->os_event.ev_cb  = button_event_handler;
-	evt->os_event.ev_arg = button;
-	evt->type            = type;
-	evt->flags           = flags;
-	
+    if (evt) {  
+        evt->os_event.ev_cb  = button_event_handler;
+        evt->os_event.ev_arg = button;
+        evt->type            = type;
+        evt->flags           = flags;
+        
 #if MYNEWT_VAL(BUTTON_USE_PER_BUTTON_CALLBACK_EVENTQ) > 0
-	os_eventq_put(button->eventq,              &evt->os_event);
+        os_eventq_put(button->eventq,              &evt->os_event);
 #else
-	os_eventq_put(button_callback_default_evq, &evt->os_event);
+        os_eventq_put(button_callback_default_evq, &evt->os_event);
 #endif
-	return 0;
+        return 0;
     } else {
-	button->state |= BUTTON_FLG_MISSED;
-	return -1;
+        button->state |= BUTTON_FLG_MISSED;
+        return -1;
     }
 }
 
@@ -139,7 +139,7 @@ button_post_event(button_t *button, uint8_t type, uint8_t flags)
 /**
  * Perform button emulation.
  *
- * @param button	the button to emulate
+ * @param button        the button to emulate
  */
 static void
 button_emulating(button_t *button)
@@ -148,53 +148,53 @@ button_emulating(button_t *button)
     bool released = true;
     
     for (button_t **from = button->emulated ; *from ; from++) {
-	if ((*from)->state & BUTTON_FLG_PRESSED) {
-	    released = false;
-	} else {
-	    pressed  = false;
-	}
+        if ((*from)->state & BUTTON_FLG_PRESSED) {
+            released = false;
+        } else {
+            pressed  = false;
+        }
     }
     
     if (pressed != !released)
-	return;
+        return;
 
     if (pressed || (released && button->emulating)) {
-	button->emulating = pressed;
-	button_set_low_level_state(button, pressed);
+        button->emulating = pressed;
+        button_set_low_level_state(button, pressed);
     }
 }
 
 /**
  * Process children of a button. Used for emulating button.
  *
- * @param button	the button to look for children
+ * @param button        the button to look for children
  */
 static void
 button_process_children(button_t *button)
 {
     if (button->children == NULL)
-	return;
+        return;
 
     for (button_t **child = button->children ; *child ; child++)
-	if ((*child)->emulated)
-	    button_emulating(*child);
+        if ((*child)->emulated)
+            button_emulating(*child);
 }
 
 /**
  * Check if one of the children is using the action, and so
  * we shouldn't generate one for ourself.
  *
- * @param button	the button to look for children
+ * @param button        the button to look for children
  */
 static bool
 button_stealed_action(button_t *button)
 {
     if (button->children == NULL)
-	return false;
+        return false;
 
     for (button_t **child = button->children ; *child ; child++)
-	if ((*child)->emulated && (*child)->emulating)
-	    return true;
+        if ((*child)->emulated && (*child)->emulating)
+            return true;
 
     return false;
 }
@@ -205,9 +205,9 @@ button_stealed_action(button_t *button)
  * This one deal with simple state/action, where only pressed/released/click
  * are considered.
  *
- * @param button	button to process
- * @param action	low level action associated to the button
- *			(_BUTTON_PRESSED, _BUTTON_RELEASED)
+ * @param button        button to process
+ * @param action        low level action associated to the button
+ *                      (_BUTTON_PRESSED, _BUTTON_RELEASED)
  */
 static void
 button_exec_simple(button_t *button, int action)
@@ -216,17 +216,17 @@ button_exec_simple(button_t *button, int action)
 
     switch(action) {
     case _BUTTON_PRESSED:
-	button->state  =  BUTTON_FLG_PRESSED;
-	break;
+        button->state  =  BUTTON_FLG_PRESSED;
+        break;
     case _BUTTON_RELEASED:
 #if MYNEWT_VAL(BUTTON_EMIT_ACTION)
 #if MYNEWT_VAL(BUTTON_USE_EMULATION)
-	if (!button_stealed_action(button))
+        if (!button_stealed_action(button))
 #endif
-	    BUTTON_POST_ACTION_EVENT(button, button->state);
+            BUTTON_POST_ACTION_EVENT(button, button->state);
 #endif
-	button->state &= ~BUTTON_FLG_PRESSED;
-	break;
+        button->state &= ~BUTTON_FLG_PRESSED;
+        break;
     }
 
 #if MYNEWT_VAL(BUTTON_EMIT_STATE_CHANGED)
@@ -246,9 +246,9 @@ button_exec_simple(button_t *button, int action)
  * This one deal with complexe action, such as generating double click, 
  * long click, repeating action, ...
  *
- * @param button	the button to process
- * @param action	low level action associated to the button
- *			(_BUTTON_PRESSED, _BUTTON_RELEASED, _BUTTON_TIMEOUT)
+ * @param button        the button to process
+ * @param action        low level action associated to the button
+ *                      (_BUTTON_PRESSED, _BUTTON_RELEASED, _BUTTON_TIMEOUT)
  */
 static void
 button_exec_fsm(button_t *button, int action)
@@ -259,105 +259,105 @@ button_exec_fsm(button_t *button, int action)
     
     switch (button->fsm_state) {
     case _BUTTON_FSM_INIT:
-	switch(action) {
-	case _BUTTON_PRESSED:
-	    goto do_pressed;
-	case _BUTTON_RELEASED:
-	    goto do_nothing;
-	case _BUTTON_TIMEOUT:
-	    goto do_assert;
-	}
-	break;
+        switch(action) {
+        case _BUTTON_PRESSED:
+            goto do_pressed;
+        case _BUTTON_RELEASED:
+            goto do_nothing;
+        case _BUTTON_TIMEOUT:
+            goto do_assert;
+        }
+        break;
 
     case _BUTTON_FSM_PRESSED:
-	switch(action) {
-	case _BUTTON_PRESSED:
-	    goto do_nothing;
-	case _BUTTON_RELEASED:
+        switch(action) {
+        case _BUTTON_PRESSED:
+            goto do_nothing;
+        case _BUTTON_RELEASED:
 #if MYNEWT_VAL(BUTTON_USE_DOUBLE)
-	    if (button->mode & BUTTON_FLG_DOUBLED) {
-		goto to_wait_dblpressed;
-	    } else {
+            if (button->mode & BUTTON_FLG_DOUBLED) {
+                goto to_wait_dblpressed;
+            } else {
 #endif
-		goto do_release;
+                goto do_release;
 #if MYNEWT_VAL(BUTTON_USE_DOUBLE)
-	    }
+            }
 #endif
-	case _BUTTON_TIMEOUT:
+        case _BUTTON_TIMEOUT:
 #if MYNEWT_VAL(BUTTON_USE_LONG)
-	    if (button->mode & BUTTON_FLG_LONG) {
-	        goto do_longpress;
+            if (button->mode & BUTTON_FLG_LONG) {
+                goto do_longpress;
 #if MYNEWT_VAL(BUTTON_USE_REPEAT)
-	    } else if (button->mode & BUTTON_FLG_REPEATING) {
-		goto do_repeat;
+            } else if (button->mode & BUTTON_FLG_REPEATING) {
+                goto do_repeat;
 #endif
             } else {
-		goto do_assert;
-	    }
+                goto do_assert;
+            }
 #elif MYNEWT_VAL(BUTTON_USE_REPEAT)
             goto do_repeat;
 #else
-	    goto do_assert;
+            goto do_assert;
 #endif
-	}
-	break;
-	
+        }
+        break;
+        
 #if MYNEWT_VAL(BUTTON_USE_DOUBLE)
     case _BUTTON_FSM_WAIT_DBLPRESSED:
-	switch(action) {
-	case _BUTTON_TIMEOUT:
-	    goto do_release;
-	case _BUTTON_PRESSED:
-	    goto do_dblpressed;
-	case _BUTTON_RELEASED:
-	    goto do_nothing;
-	}
-	break;
+        switch(action) {
+        case _BUTTON_TIMEOUT:
+            goto do_release;
+        case _BUTTON_PRESSED:
+            goto do_dblpressed;
+        case _BUTTON_RELEASED:
+            goto do_nothing;
+        }
+        break;
 
     case _BUTTON_FSM_DBLPRESSED:
-	switch(action) {
-	case _BUTTON_TIMEOUT :
+        switch(action) {
+        case _BUTTON_TIMEOUT :
 #if MYNEWT_VAL(BUTTON_USE_LONG)
-	    if (button->mode & BUTTON_FLG_LONG) {
-		goto do_longpress;
+            if (button->mode & BUTTON_FLG_LONG) {
+                goto do_longpress;
 #if MYNEWT_VAL(BUTTON_USE_REPEAT)
-	    } else if (button->mode & BUTTON_FLG_REPEATING) {
-		goto do_repeat;
+            } else if (button->mode & BUTTON_FLG_REPEATING) {
+                goto do_repeat;
 #endif
-	    } else {
-		goto do_assert;
-	    }
+            } else {
+                goto do_assert;
+            }
 #elif MYNEWT_VAL(BUTTON_USE_REPEAT)
-	    goto do_repeat;
+            goto do_repeat;
 #else
-	    goto do_assert;
+            goto do_assert;
 #endif
-	case _BUTTON_RELEASED: goto do_release;
-	case _BUTTON_PRESSED : goto do_nothing;
-	} 
-	break;
+        case _BUTTON_RELEASED: goto do_release;
+        case _BUTTON_PRESSED : goto do_nothing;
+        } 
+        break;
 #endif
 
 #if MYNEWT_VAL(BUTTON_USE_LONG  ) || \
     MYNEWT_VAL(BUTTON_USE_REPEAT)
     case _BUTTON_FSM_HOLD_OR_REPEAT:
-	switch(action) {
-	case _BUTTON_TIMEOUT:
+        switch(action) {
+        case _BUTTON_TIMEOUT:
 #if MYNEWT_VAL(BUTTON_USE_REPEAT)
-	    if (button->mode & BUTTON_FLG_REPEATING) {
-		goto do_repeat;
-	    } else {
+            if (button->mode & BUTTON_FLG_REPEATING) {
+                goto do_repeat;
+            } else {
 #endif
-		goto do_assert;
+                goto do_assert;
 #if MYNEWT_VAL(BUTTON_USE_REPEAT)
-	    }
+            }
 #endif
-	case _BUTTON_RELEASED:
-	    goto do_release;
-	case _BUTTON_PRESSED:
-	    goto do_nothing;
-	}
-	break;
+        case _BUTTON_RELEASED:
+            goto do_release;
+        case _BUTTON_PRESSED:
+            goto do_nothing;
+        }
+        break;
 #endif
     }
 
@@ -373,7 +373,7 @@ button_exec_fsm(button_t *button, int action)
         os_callout_reset(callout, MYNEWT_VAL(BUTTON_LONGHOLD_TICKS));
 #if MYNEWT_VAL(BUTTON_USE_REPEAT)
     } else if (button->mode & BUTTON_FLG_REPEATING) {
-	os_callout_reset(callout, MYNEWT_VAL(BUTTON_REPEAT_FIRST_TICKS));
+        os_callout_reset(callout, MYNEWT_VAL(BUTTON_REPEAT_FIRST_TICKS));
 #endif
     }
 #elif MYNEWT_VAL(BUTTON_USE_REPEAT)
@@ -398,14 +398,14 @@ button_exec_fsm(button_t *button, int action)
  do_dblpressed:
 #if MYNEWT_VAL(BUTTON_USE_LONG)
     if (button->mode & BUTTON_FLG_LONG) {
-	os_callout_reset(callout, MYNEWT_VAL(BUTTON_LONGHOLD_TICKS));
+        os_callout_reset(callout, MYNEWT_VAL(BUTTON_LONGHOLD_TICKS));
 #if MYNEWT_VAL(BUTTON_USE_REPEAT)
     } else if (button->mode & BUTTON_FLG_REPEATING) {
-	os_callout_reset(callout, MYNEWT_VAL(BUTTON_REPEAT_FIRST_TICKS)); 
+        os_callout_reset(callout, MYNEWT_VAL(BUTTON_REPEAT_FIRST_TICKS)); 
 #endif
     } else {
-	os_callout_stop(callout);
-    }	
+        os_callout_stop(callout);
+    }   
 #elif MYNEWT_VAL(BUTTON_USE_REPEAT)
     os_callout_reset(callout, MYNEWT_VAL(BUTTON_REPEAT_FIRST_TICKS)); 
 #else
@@ -423,7 +423,7 @@ button_exec_fsm(button_t *button, int action)
  do_longpress:
 #if MYNEWT_VAL(BUTTON_USE_REPEAT)
     if (button->mode & BUTTON_FLG_REPEATING)
-	os_callout_reset(callout, MYNEWT_VAL(BUTTON_REPEAT_FIRST_TICKS));
+        os_callout_reset(callout, MYNEWT_VAL(BUTTON_REPEAT_FIRST_TICKS));
 #endif
     button->state |= BUTTON_FLG_LONG;
 #if MYNEWT_VAL(BUTTON_EMIT_STATE_CHANGED)
@@ -441,13 +441,13 @@ button_exec_fsm(button_t *button, int action)
 #if MYNEWT_VAL(BUTTON_USE_EMULATION)
     if (!button_stealed_action(button))
 #endif
-	BUTTON_POST_ACTION_EVENT(button, button->state);
+        BUTTON_POST_ACTION_EVENT(button, button->state);
 #endif
     
     if (!(button->state & BUTTON_FLG_REPEATING)) {
-	button->state |= BUTTON_FLG_REPEATING;
+        button->state |= BUTTON_FLG_REPEATING;
 #if MYNEWT_VAL(BUTTON_EMIT_STATE_CHANGED)
-	BUTTON_POST_STATE_EVENT(button, button->state);
+        BUTTON_POST_STATE_EVENT(button, button->state);
 #endif
     }
     return;
@@ -461,9 +461,9 @@ button_exec_fsm(button_t *button, int action)
     if (!button_stealed_action(button)) {
 #endif
 #if MYNEWT_VAL(BUTTON_USE_REPEAT)
-	if (!(button->state & BUTTON_FLG_REPEATING))
+        if (!(button->state & BUTTON_FLG_REPEATING))
 #endif
-	    BUTTON_POST_ACTION_EVENT(button, button->state);
+            BUTTON_POST_ACTION_EVENT(button, button->state);
 #if MYNEWT_VAL(BUTTON_USE_EMULATION)
     }
 #endif
@@ -484,7 +484,7 @@ button_exec_fsm(button_t *button, int action)
  * Callout function used for processing timeout.
  * Used for processing complexe action.
  *
- * @param ev		event from callout
+ * @param ev            event from callout
  */
 static void
 button_fsm_callout(struct os_event *ev)
@@ -499,18 +499,18 @@ button_fsm_callout(struct os_event *ev)
 void
 button_init(button_t *buttons, unsigned int count, button_callback_t cb)
 {
-#if MYNEWT_VAL(BUTTON_USE_DOUBLE) ||				\
-    MYNEWT_VAL(BUTTON_USE_LONG  ) ||				\
-    MYNEWT_VAL(BUTTON_USE_REPEAT) ||				\
+#if MYNEWT_VAL(BUTTON_USE_DOUBLE) ||                            \
+    MYNEWT_VAL(BUTTON_USE_LONG  ) ||                            \
+    MYNEWT_VAL(BUTTON_USE_REPEAT) ||                            \
     MYNEWT_VAL(BUTTON_USE_PER_BUTTON_CALLBACK_EVENTQ) > 0
     unsigned int i;
 #endif
     
     if (button_internal_evq == NULL) {
-	button_internal_evq = os_eventq_dflt_get();
+        button_internal_evq = os_eventq_dflt_get();
     }
     if (button_callback_default_evq == NULL) {
-	button_callback_default_evq = os_eventq_dflt_get();
+        button_callback_default_evq = os_eventq_dflt_get();
     }
     
     button_callback = cb;
@@ -519,18 +519,18 @@ button_init(button_t *buttons, unsigned int count, button_callback_t cb)
     MYNEWT_VAL(BUTTON_USE_LONG  ) || \
     MYNEWT_VAL(BUTTON_USE_REPEAT)
     for (i = 0 ; i < count ; i++) {
-	button_t *button = &buttons[i];
-	os_callout_init(&button->callout, button_internal_evq,
-			button_fsm_callout, button);
+        button_t *button = &buttons[i];
+        os_callout_init(&button->callout, button_internal_evq,
+                        button_fsm_callout, button);
     }
 #endif
 
 #if MYNEWT_VAL(BUTTON_USE_PER_BUTTON_CALLBACK_EVENTQ) > 0
-    for (unsigned int i = 0 ; i < count ; i++) {
-	button_t *button = &buttons[i];
-	if (button->eventq == NULL) {
-	    button->eventq = button_callback_default_evq;
-	}
+    for (i = 0 ; i < count ; i++) {
+        button_t *button = &buttons[i];
+        if (button->eventq == NULL) {
+            button->eventq = button_callback_default_evq;
+        }
     }
 #endif
 }
@@ -545,9 +545,9 @@ button_set_low_level_state(button_t *button, bool pressed)
     MYNEWT_VAL(BUTTON_USE_LONG  ) || \
     MYNEWT_VAL(BUTTON_USE_REPEAT)
     if (button->mode & ~(BUTTON_FLG_PRESSED)) {
-	button_exec_fsm(button, action);
+        button_exec_fsm(button, action);
     } else {
-	button_exec_simple(button, action);
+        button_exec_simple(button, action);
     }
 #else
     button_exec_simple(button, action);

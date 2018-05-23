@@ -1,3 +1,22 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *  http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on an
+ * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ * KIND, either express or implied.  See the License for the
+ * specific language governing permissions and limitations
+ * under the License.
+ */
+
 #ifndef _BLINK_H_
 #define _BLINK_H_
 
@@ -12,7 +31,7 @@
  *
  * Blinking is done by pushing callouts to the event queue, so
  * the 'on' and 'off' methods will be executed in the event queue context.
- * (default queue can be configured at compile time: see syscfg BLINK_EVENTQ)
+ * (default queue can be configured with the blink_evq_set())
  *
  *
  * A small example:
@@ -35,31 +54,31 @@
 /**
  * Fast time unit: 0.1s
  */
-#define BLINK_UNIT_FAST			(OS_TICKS_PER_SEC / 10)
+#define BLINK_UNIT_FAST                 (OS_TICKS_PER_SEC / 10)
 /**
  * Medium time unit: 0.25s
  */
-#define BLINK_UNIT_MEDIUM		(OS_TICKS_PER_SEC / 4)
+#define BLINK_UNIT_MEDIUM               (OS_TICKS_PER_SEC / 4)
 /**
  * Slow time unit: 0.5s
  */
-#define BLINK_UNIT_SLOW			(OS_TICKS_PER_SEC / 2)
+#define BLINK_UNIT_SLOW                 (OS_TICKS_PER_SEC / 2)
 
 /**
  * Immediately start the new blinking sequence, whatever
  * is the current blinking state (but still ensure separator time).
  */
-#define BLINK_SCHEDULED_IMMEDIATE		1
+#define BLINK_SCHEDULED_IMMEDIATE               1
 /**
  * Start the blinking sequence when on an 'off' state.
  */
-#define BLINK_SCHEDULED_WAIT_BLINK		2
+#define BLINK_SCHEDULED_WAIT_BLINK              2
 /**
  * Start the blinking sequence when the current sequence
  * is considered as finished (or whatever is considered
  * acceptable for the current blinking processor)
  */
-#define BLINK_SCHEDULED_WAIT_SEQUENCE		3
+#define BLINK_SCHEDULED_WAIT_SEQUENCE           3
 
 /**
  * @brief Hold a blink definition.
@@ -71,7 +90,7 @@ typedef uint32_t blink_code_t;
 /**
  * @brief Retrieve the blink length
  *
- * @param  blink 		blink value
+ * @param  blink                blink value
  * @return Blink length
  */
 #define BLINK_GET_LENGTH(blink) ((blink >>  0) & 0xFF)
@@ -79,7 +98,7 @@ typedef uint32_t blink_code_t;
 /**
  * @brief Retrieve the blink delay
  *
- * @param  blink 		blink value
+ * @param  blink                blink value
  * @return Blink delay
  */
 #define BLINK_GET_DELAY(blink)  ((blink >>  8) & 0xFF)
@@ -87,7 +106,7 @@ typedef uint32_t blink_code_t;
 /**
  * @brief Retrieve the blink wait
  *
- * @param  blink 		blink value
+ * @param  blink                blink value
  * @return Blink wait
  */
 #define BLINK_GET_WAIT(blink)   ((blink >> 16) & 0xFF)
@@ -95,7 +114,7 @@ typedef uint32_t blink_code_t;
 /**
  * @brief Retrieve the blink count
  *
- * @param  blink 		blink value
+ * @param  blink                blink value
  * @return Blink count
  */
 #define BLINK_GET_COUNT(blink)  ((blink >> 24) & 0x0F)
@@ -116,12 +135,12 @@ typedef uint32_t blink_code_t;
  * @details Create the blinking sequence:
  *          (on[length] / (off[delay] / on[length]){count-1} off[wait])+
  *
- * @param length 	duration of led on                   (1 .. 255)
- * @param delay  	duration of led off (betwenn led on) (1 .. 255)
- * @param count  	define a group of consecutive on/off (1 .. 15)
- * @param wait   	duration of led off (between group)  (1 .. 255)
+ * @param length        duration of led on                   (1 .. 255)
+ * @param delay         duration of led off (betwenn led on) (1 .. 255)
+ * @param count         define a group of consecutive on/off (1 .. 15)
+ * @param wait          duration of led off (between group)  (1 .. 255)
  */
-#define BLINK(length, delay, count, wait)  ((length <<  0) |	\
+#define BLINK(length, delay, count, wait)  ((length <<  0) |    \
                                             (delay  <<  8) |    \
                                             (wait   << 16) |    \
                                             (count  << 24))
@@ -139,24 +158,24 @@ typedef uint32_t blink_code_t;
 /**
  * Blink once and stop
  *
- * @param length 		duration of 'on' state
+ * @param length                duration of 'on' state
  */
 #define BLINK_ONCE(length)                 BLINK(length, 0, 1, 0)
 
 /**
  * Continuously blink
  *
- * @param length  		duration of 'on' state
- * @param delay   		duration of 'off' state
+ * @param length                duration of 'on' state
+ * @param delay                 duration of 'off' state
  */
 #define BLINK_CONTINUOUS(length, delay)    BLINK(length, delay, 0, 0)
 
 /**
  * Blink n-time and stop.
  *
- * @param length  		duration of 'on' state
- * @param delay   		duration of 'off' state
- * @param count   		number of blinks
+ * @param length                duration of 'on' state
+ * @param delay                 duration of 'off' state
+ * @param count                 number of blinks
  */
 #define BLINK_STREAK(length, delay, count) BLINK(length, delay, count, 0)
 
@@ -199,50 +218,61 @@ struct blink {
      * Running 
      */
     struct {
-	blink_onoff_t onoff;
-	void *data;
-	uint16_t step;
-	uint8_t flags;
+        blink_onoff_t onoff;
+        void *data;
+        uint16_t step;
+        uint8_t flags;
     } running;
     /*
      * Pending 
      */
     struct {
-	blink_onoff_t onoff;
-	void *data;
-	uint8_t scheduled;
+        blink_onoff_t onoff;
+        void *data;
+        uint8_t scheduled;
     } next;
     /*
      * Mutex
      */
     struct os_mutex mutex;
     /*
-     * Callout for 'on'
+     * Callout for 'on'/'off'
      */
-    struct os_callout on_callout;
+    struct os_callout onoff_callout;
     /*
-     * Callout for 'off'
+     * State value for callout
      */
-    struct os_callout off_callout;
+    bool c_state;
+    int32_t c_next;
 };
+
+/**
+ * Specify an alternate default queue for processing blink callback.
+ *
+ * @note If not called, the default OS eventq will be used: os_eventq_dflt_get()
+ *
+ * @note Calling this function afer blink initialisation has been done
+ *       will result in an undefined behaviour.
+ */
+void blink_evq_set(struct os_eventq *evq);
 
 /**
  * Blink handler initialisation.
  *
- * @param blink			blink handler
+ * @param blink                 blink handler
  */
 void blink_init(blink_t *blink);
 
 /**
  * Start blinking sequence.
  *
- * @param blink			blink handler
- * @param code			Blinkink sequence description
- *				 (see: BLINK macro)
- * @param scheduled		when to start the blinking sequence:
- * 				  o BLINK_SCHEDULED_IMMEDIATE
- *				  o BLINK_SCHEDULED_WAIT_BLINK
- *				  o BLINK_SCHEDULED_WAIT_SEQUENCE
+ * @param blink                 blink handler
+ * @param code                  Blinkink sequence description
+ *                               (see: BLINK macro)
+ * @param scheduled             when to start the blinking sequence:
+ *                                o BLINK_SCHEDULED_IMMEDIATE
+ *                                o BLINK_SCHEDULED_WAIT_BLINK
+ *                                o BLINK_SCHEDULED_WAIT_SEQUENCE
  */
 void blink_code(blink_t *blink, blink_code_t code, int scheduled);
 
@@ -250,12 +280,12 @@ void blink_code(blink_t *blink, blink_code_t code, int scheduled);
  * Schedule blinking sequence using short and long blink.
  * Can be used to emit morse code.
  *
- * @param blink			blink handler
- * @param dotdash		string using '.' and '-'
- * @param scheduled		when to start the blinking sequence:
- * 				  o BLINK_SCHEDULED_IMMEDIATE
- *				  o BLINK_SCHEDULED_WAIT_BLINK
- *				  o BLINK_SCHEDULED_WAIT_SEQUENCE
+ * @param blink                 blink handler
+ * @param dotdash               string using '.' and '-'
+ * @param scheduled             when to start the blinking sequence:
+ *                                o BLINK_SCHEDULED_IMMEDIATE
+ *                                o BLINK_SCHEDULED_WAIT_BLINK
+ *                                o BLINK_SCHEDULED_WAIT_SEQUENCE
  */
 void blink_dotdash(blink_t *blink, char *dotdash, int scheduled);
 
@@ -264,11 +294,11 @@ void blink_dotdash(blink_t *blink, char *dotdash, int scheduled);
  *
  * @note In this case the 'separator' time won't be applied.
  *
- * @param blink			blink handler
- * @param scheduled		when to stop the blinking sequence:
- * 				  o BLINK_SCHEDULED_IMMEDIATE
- *				  o BLINK_SCHEDULED_WAIT_BLINK
- *				  o BLINK_SCHEDULED_WAIT_SEQUENCE
+ * @param blink                 blink handler
+ * @param scheduled             when to stop the blinking sequence:
+ *                                o BLINK_SCHEDULED_IMMEDIATE
+ *                                o BLINK_SCHEDULED_WAIT_BLINK
+ *                                o BLINK_SCHEDULED_WAIT_SEQUENCE
  */
 void blink_stop(blink_t *blink, int scheduled);
 
