@@ -28,7 +28,8 @@
 #  - NO_GDB set if we should not start gdb to debug
 #
 
-. $CORE_PATH/hw/scripts/jlink.sh
+#. $CORE_PATH/hw/scripts/jlink.sh
+. $CORE_PATH/hw/scripts/openocd.sh
 
 FILE_NAME=$BIN_BASENAME.elf
 
@@ -40,7 +41,11 @@ if [ $# -gt 2 ]; then
     EXTRA_GDB_CMDS="add-symbol-file $SPLIT_ELF_NAME 0x8000 -readnow"
 fi
 
+CFG="-s $BSP_PATH -f nrf52832.cfg"
+# Exit openocd when gdb detaches.
+#EXTRA_JTAG_CMD="$EXTRA_JTAG_CMD; stm32f7x.cpu configure -event gdb-detach {if {[stm32f7x.cpu curstate] eq \"halted\"} resume;shutdown}"
+
 JLINK_DEV="nRF52"
 
-jlink_debug
-
+#jlink_debug
+openocd_debug
